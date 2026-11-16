@@ -19,6 +19,9 @@ export declare class EditableDocument<T> {
     message: string;
     status: string;
     history: string[];
+    saveState: "error" | "idle" | "saving" | "saved";
+    private timer;
+    private queue;
     readonly dirty: boolean;
     constructor(id: string, path: string, publishPath?: string);
     apply(wire: Wire<T>): void;
@@ -27,6 +30,9 @@ export declare class EditableDocument<T> {
     remember(): void;
     edit(change: (draft: T) => void): void;
     undo(): void;
+    change(edit: (draft: T) => void, wait?: number): void;
+    autosave(wait?: number): void;
+    flush(): Promise<void>;
     private run;
     private saveNow;
     save(message?: string): Promise<void>;

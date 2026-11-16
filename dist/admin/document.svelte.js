@@ -15,6 +15,10 @@ export class EditableDocument {
     message = $state("");
     status = $state("");
     history = $state([]);
+    // Autosave: "saving" while a change waits to be saved.
+    saveState = $state("idle");
+    timer;
+    queue = Promise.resolve();
     dirty = $derived(this.revision > 0 && JSON.stringify(this.draft) !== this.saved);
     constructor(
     // The document id, e.g. "pictures".
@@ -75,6 +79,38 @@ export class EditableDocument {
             return;
         this.history = this.history.slice(0, -1);
         this.draft = JSON.parse(last);
+        this.autosave(0);
+    }
+    // Applies a change and saves it shortly after (a run of quick changes,
+    // like typing, is one save).
+    change(edit, wait = 600) {
+        this.edit(edit);
+        this.autosave(wait);
+    }
+    autosave(wait = 600) {
+        this.saveState = "saving";
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => {
+            this.queue = this.queue.then(async () => {
+                try {
+                    this.error = "";
+                    await this.saveNow();
+                    this.saveState = "saved";
+                }
+                catch (e) {
+                    this.error = e instanceof Error ? e.message : String(e);
+                    this.saveState = "error";
+                }
+            });
+        }, wait);
+    }
+    // Waits for a pending autosave.
+    async flush() {
+        if (this.saveState === "saving") {
+            clearTimeout(this.timer);
+            this.queue = this.queue.then(() => this.saveNow());
+        }
+        await this.queue;
     }
     async run(task) {
         if (this.busy)
@@ -94,7 +130,7 @@ export class EditableDocument {
         }
     }
     async saveNow() {
-        if (this.dirty)
+        if (this.dirty && this.revision)
             this.apply(await this.request(this.path, "PUT", { revision: this.revision, draft: this.draft }));
     }
     save(message = "Saved. The live site has not changed yet.") {
@@ -105,6 +141,7 @@ export class EditableDocument {
     }
     publish(message = "Published. It's live.") {
         return this.run(async () => {
+            await this.flush();
             await this.saveNow();
             this.apply(await this.request(this.publishPath, "POST", { document: this.id, revision: this.revision }));
             this.history = [];
@@ -117,6 +154,7 @@ export class EditableDocument {
         return this.run(async () => {
             let count = 0;
             try {
+                await this.flush();
                 for (const [index, file] of files.entries()) {
                     const label = files.length > 1 ? `Photo ${index + 1} of ${files.length}` : "Photo";
                     await this.saveNow();
@@ -132,7 +170,7 @@ export class EditableDocument {
         });
     }
     beforeUnload = (event) => {
-        if (this.dirty || this.busy) {
+        if (this.dirty || this.busy || this.saveState === "saving") {
             event.preventDefault();
             event.returnValue = "";
         }
