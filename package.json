@@ -50,7 +50,17 @@
       "default": "./dist/admin/SignIn.svelte"
     },
     "./routes/*": "./dist/routes/*",
-    "./migrations/*": "./migrations/*"
+    "./migrations/*": "./migrations/*",
+    "./image-upload": "./dist/imageUpload.js",
+    "./document-api": "./dist/documentApi.js",
+    "./gallery": "./dist/gallery.js",
+    "./admin/upload-image": "./dist/admin/uploadImage.js",
+    "./admin/document": "./dist/admin/document.svelte.js",
+    "./admin/ImageList.svelte": {
+      "types": "./dist/admin/ImageList.svelte.d.ts",
+      "svelte": "./dist/admin/ImageList.svelte",
+      "default": "./dist/admin/ImageList.svelte"
+    }
   },
   "scripts": {
     "build": "node scripts/build.mjs",
