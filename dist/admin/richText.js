@@ -20,6 +20,17 @@ export const schema = new Schema({
     marks: {
         em: mark("em"),
         strong: mark("strong"),
+        underline: {
+            parseDOM: [
+                { tag: "u" },
+                { tag: "ins" },
+                {
+                    style: "text-decoration",
+                    getAttrs: (value) => /\bunderline\b/.test(value) && null,
+                },
+            ],
+            toDOM: () => ["u", 0],
+        },
         link: {
             ...mark("link"),
             // Pasted links to anything but the web or email lose the link.
@@ -53,6 +64,7 @@ const parser = new MarkdownParser(schema, markdown, {
     list_item: tokens.list_item,
     em: tokens.em,
     strong: tokens.strong,
+    u: { mark: "underline" },
     link: tokens.link,
     hardbreak: tokens.hardbreak,
     softbreak: { node: "hard_break" },
@@ -82,13 +94,20 @@ const serializer = new MarkdownSerializer({
 }, {
     em: defaultMarkdownSerializer.marks.em,
     strong: defaultMarkdownSerializer.marks.strong,
+    underline: {
+        open: "++",
+        close: "++",
+        mixable: true,
+        expelEnclosingWhitespace: true,
+    },
     link: {
         open: "[",
         close: (_state, mark) => `](${mark.attrs.href.replace(/[()]/g, "\\$&")})`,
     },
 }, 
-// "1) " at the start of a line would also begin a list.
-{ escapeExtraCharacters: /(?<=^\s*\d+)\)(?=\s|$)/ });
+// "1) " at the start of a line would also begin a list, and "++" would
+// start an underline.
+{ escapeExtraCharacters: /(?<=^\s*\d+)\)(?=\s|$)|\+(?=\+)/g });
 export const parseMarkdown = (source) => parser.parse(source);
 export const serializeMarkdown = (doc) => serializer.serialize(doc, { tightLists: true });
 // Markdown merges neighbouring lists of one kind, so the editor does too.
