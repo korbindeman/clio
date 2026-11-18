@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP, magicLink } from "better-auth/plugins";
 import { loginDestination } from "./access.js";
+import { approvalPage } from "./approval.js";
 export const LOGIN_SECONDS = 600;
 // A sign-in lasts one week on that device and is never extended, so a device
 // an editor stops using drops out on its own.
@@ -153,7 +154,7 @@ export function createCmsAuth(config) {
                         const otp = await auth.api.createVerificationOTP({
                             body: { email, type: "sign-in" },
                         });
-                        await config.sendLink(email, url, ctx?.request, otp);
+                        await config.sendLink(email, approvalPage(url, config.baseURL), ctx?.request, otp);
                     }
                     catch {
                         try {

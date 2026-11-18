@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick, onMount, onDestroy } from "svelte";
+  import { approvalTarget } from "../approval.js";
   let {
     demo = false,
     destination = "/admin/",
@@ -18,7 +19,7 @@
   onDestroy(() => clearTimeout(welcomeTimer));
   let email = $state("");
   let code = $state("");
-  let step = $state<"email" | "sent" | "welcome">(
+  let step = $state<"email" | "sent" | "approve" | "welcome">(
     approved ? "welcome" : "email",
   );
   let busy = $state(false);
@@ -29,6 +30,8 @@
   let resendAt = $state(0);
   let now = $state(Date.now());
   let emailInput = $state<HTMLInputElement>();
+  // Set when the page was opened from the emailed link (see approvalPage).
+  let approveTarget = $state<string | null>(null);
   const remaining = $derived(Math.max(0, Math.ceil((resendAt - now) / 1000)));
   const callbackURL = $derived.by(() => {
     const params = new URLSearchParams({ approved: "1" });
@@ -43,6 +46,12 @@
   const localDev = $derived(ready && devAdmin("admin"));
   onMount(() => {
     ready = true;
+    if (!approved && !demo) {
+      approveTarget = approvalTarget(
+        new URLSearchParams(window.location.search).get("approve"),
+      );
+      if (approveTarget) step = "approve";
+    }
     if (approved && !demo)
       welcomeTimer = setTimeout(
         () => window.location.assign(destination),
@@ -180,6 +189,12 @@
       <button type="button" onclick={changeEmail}>Start again</button>
     </div>
   {/if}
+{:else if step === "approve" && approveTarget}
+  <h1>Sign in</h1>
+  <p class="note">Select Sign in to finish signing in on this device.</p>
+  <a class="continue" href={approveTarget}
+    >Sign in<span aria-hidden="true">→</span></a
+  >
 {:else if step === "email"}
   <form novalidate={demo || localDev} onsubmit={sendLink} aria-busy={busy}>
     <label for="email">Email</label>

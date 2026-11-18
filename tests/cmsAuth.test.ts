@@ -10,6 +10,17 @@ import {
   approvedCallback,
 } from "../src/auth.ts";
 import { describeClient, loginEmail } from "../src/loginEmail.ts";
+import { approvalTarget } from "../src/approval.ts";
+
+// The emailed link opens /login/?approve=…; the page then follows the verify
+// link. Tests keep the verify link as `url` and the emailed one as `emailed`.
+function verifyLink(emailed: string) {
+  const page = new URL(emailed);
+  const target = approvalTarget(page.searchParams.get("approve"));
+  if (page.pathname !== "/login/" || !target)
+    throw new Error(`Not a sign-in page link: ${emailed}`);
+  return new URL(target, page.origin).toString();
+}
 
 const origin = "https://portfolio.example";
 const email = "editor@example.com";
@@ -30,6 +41,7 @@ function setup() {
   const sent: {
     email: string;
     url: string;
+    emailed?: string;
     otp?: string;
     request?: Request;
   }[] = [];
@@ -56,7 +68,7 @@ function setup() {
     },
     sendLink: async (address, url, request, otp) => {
       if (failedDelivery) throw new Error("Delivery failed");
-      sent.push({ email: address, url, otp, request });
+      sent.push({ email: address, url: verifyLink(url), emailed: url, otp, request });
     },
   });
   const request = (
@@ -123,6 +135,9 @@ test("magic link creates a verified session, is one-use, and sign-out revokes it
   const token = f.tokenOf(f.sent[0].url);
   assert.match(token, /^[a-zA-Z]{32}$/);
   assert.match(f.sent[0].url, /\/api\/auth\/magic-link\/verify\?/);
+  // A mail scanner opening the emailed link only loads the sign-in page.
+  assert.match(f.sent[0].emailed!, /^https:\/\/[^/]+\/login\/\?approve=/);
+  assert.equal(new URL(f.sent[0].emailed!).searchParams.get("token"), null);
   assert.equal(
     new URL(f.sent[0].url).searchParams.get("callbackURL"),
     "/login/?approved=1&next=%2Fadmin%2F",
@@ -379,7 +394,7 @@ test("one email login works on live and WIP; sign-out revokes both", async () =>
     adminEmails: email,
     cookieDomain: "portfolio.example",
     sendLink: async (address: string, url: string) => {
-      f.sent.push({ email: address, url });
+      f.sent.push({ email: address, url: verifyLink(url), emailed: url });
     },
     reserveLink: async () => true,
     revokeLinks: async () => {},

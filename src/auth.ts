@@ -2,6 +2,7 @@ import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP, magicLink } from "better-auth/plugins";
 import { loginDestination } from "./access.ts";
+import { approvalPage } from "./approval.ts";
 
 export const LOGIN_SECONDS = 600;
 
@@ -180,7 +181,7 @@ export function createCmsAuth(config: LoginConfig) {
             const otp = await auth.api.createVerificationOTP({
               body: { email, type: "sign-in" },
             });
-            await config.sendLink(email, url, ctx?.request, otp);
+            await config.sendLink(email, approvalPage(url, config.baseURL), ctx?.request, otp);
           } catch {
             try {
               const hashed = await hashLoginToken(token);
