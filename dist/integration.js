@@ -61,6 +61,7 @@ export default function cms(options) {
         appName: options.appName,
         cookiePrefix: options.cookiePrefix,
         documents: options.documents,
+        isr: options.isr ?? [],
     };
     return {
         name: PACKAGE,

@@ -1,14 +1,27 @@
 import type { APIContext } from "astro";
 import { defineMiddleware } from "astro:middleware";
+import config from "virtual:clio/config";
+import { isrMatch } from "./isr.ts";
 
 // Guards the admin pages and the admin API: a signed-in editor, and for
-// writes, a request from the site itself. The integration adds this outside a
+// writes, a request from the site itself. Public pages listed in the `isr`
+// option are served from the edge cache until the next publication. The integration adds this outside a
 // static release only, since a release has no admin or CMS API.
 export const onRequest = defineMiddleware(async (context, next) => {
   const path = context.url.pathname;
   const protectedRoute =
     /^\/admin(?:\/|$)/.test(path) || /^\/api\/admin(?:\/|$)/.test(path);
-  if (!protectedRoute) return next();
+  if (!protectedRoute) {
+    if (!config.isr?.length || !isrMatch(path, config.isr)) return next();
+    const [{ isrResponse, contentVersion, edgeCache }, { cmsEnv }] =
+      await Promise.all([import("./isr.ts"), import("./login.ts")]);
+    return isrResponse(
+      context.request,
+      () => contentVersion(cmsEnv().CMS_DB),
+      edgeCache(),
+      next,
+    );
+  }
   const { withSerialisedAdmin } = await import("./serialD1.ts");
   return withSerialisedAdmin(() => handleAdmin(context, next));
 });

@@ -4,6 +4,7 @@ declare module "virtual:clio/config" {
     appName: string;
     cookiePrefix: string;
     documents: Record<string, "list" | "object">;
+    isr: string[];
   };
   export default config;
 }

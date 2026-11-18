@@ -17,6 +17,10 @@ export interface CmsOptions {
   // A static release: no adapter, admin, auth or CMS routes, and every page
   // prerendered. Defaults to STATIC_RELEASE being set.
   release?: boolean;
+  // A live site (no WIP, no static release): server-rendered public pages to
+  // keep in the edge cache until the next publication, e.g.
+  // ["/", "/archive/garments", "/collections/*"]. See src/isr.ts.
+  isr?: string[];
 }
 
 const PACKAGE = "@korbindeman/clio";
@@ -94,6 +98,7 @@ export default function cms(options: CmsOptions): AstroIntegration {
     appName: options.appName,
     cookiePrefix: options.cookiePrefix,
     documents: options.documents,
+    isr: options.isr ?? [],
   };
   return {
     name: PACKAGE,
