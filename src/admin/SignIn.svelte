@@ -221,7 +221,7 @@
       autocomplete="one-time-code"
       spellcheck="false"
       maxlength={6}
-      pattern="[0-9]{6}"
+      pattern={"[0-9]{6}"}
       required={!demo}
       readonly={busy || !ready}
       aria-describedby={error ? "login-error" : "link-note"}
