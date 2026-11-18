@@ -9,7 +9,7 @@ It's built for my own client sites and isn't a supported product. It is a comple
 - **Sign-in.** Email codes and magic links through [Better Auth](https://www.better-auth.com). Only the addresses in `ADMIN_EMAILS` can sign in, and sign-up is disabled.
 - **Admin guard.** The admin pages and admin API need a signed-in editor, and writes must come from the site itself. With `PRIVATE_PREVIEW=true`, every page needs sign-in, which suits a work-in-progress copy of the site.
 - **Documents.** Drafts, publishing and history in D1. Each document is one row, and every write checks its revision.
-- **Media.** Image uploads with display sizes and placeholders, preview loops, and a private bucket for originals, all in R2.
+- **Media.** Image uploads with display sizes and placeholders, preview loops, MP3 sound, and a private bucket for originals, all in R2.
 - **Static releases.** Production can be plain static files, built from a snapshot of the preview site's published content (`release`) and checked before it ships (`verify-release`).
 - **Admin building blocks.** `SignIn.svelte`, `RichText.svelte` (a WYSIWYG field that stores Markdown), and safe Markdown rendering.
 
@@ -66,7 +66,7 @@ The integration adds `/api/auth/*`, `/logout`, `/media/*` and the admin middlewa
 - **Migrations:** copy `migrations/0001_cms.sql` into the site's `migrations/` and `migrations/auth-0001_login.sql` into its `auth-migrations/`. Then add each editor to `cms_auth_user` in a later migration (the auth migration shows how).
 - **Admin API:** build routes with `readRow`, `saveDraft`, `publishDocument` and friends from `@korbindeman/clio/store`, and image uploads with `readImageForm` from `@korbindeman/clio/upload` and `putMedia` from `@korbindeman/clio/media`. The middleware puts the editor's email in `Astro.locals.adminEmail`.
 - **Public pages:** read content with `loadPublished(id)` from `@korbindeman/clio/published`. It reads D1 on the preview Worker and the snapshot in a static release. Dynamic routes add a `getStaticPaths` for the release build.
-- **Scripts:** a site's `scripts/release.mjs` calls `release()` from `@korbindeman/clio/release`, and `scripts/deploy.mjs` calls `deploy()` from `@korbindeman/clio/deploy`.
+- **Scripts:** a site's `scripts/release.mjs` calls `release()` from `@korbindeman/clio/release`, and `scripts/deploy.mjs` calls `deploy()` from `@korbindeman/clio/deploy`. `release()` takes `files` for extra files in the release, such as a `_redirects` that sends `/admin` to the preview site.
 
 Locally (`astro dev` on localhost), no email is sent. The sign-in link and code are printed in the dev server log, and sign-ins are kept in `CMS_DB`.
 

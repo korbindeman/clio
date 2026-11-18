@@ -35,7 +35,7 @@ export function imageProps(image: { variants: { width: number; src: string }[] }
 }
 
 const MEDIA =
-  /\/media\/([a-zA-Z0-9-]{1,64}\/(?:\d+\.webp|share\.jpg|clip\.mp4))/g;
+  /\/media\/([a-zA-Z0-9-]{1,64}\/(?:\d+\.webp|share\.jpg|clip\.mp4|audio\.mp3))/g;
 
 // Every media key a built page or file refers to, e.g. "abc/640.webp".
 export function mediaKeysIn(text: string): Set<string> {

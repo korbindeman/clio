@@ -55,12 +55,13 @@ test("a snapshot takes WIP's published content, not its drafts", () => {
 
 test("media references are found in built pages", () => {
   const keys = mediaKeysIn(
-    '<img srcset="/media/abc-1/320.webp 320w, /media/abc-1/640.webp 640w"><video data-src="/media/loop/clip.mp4"> /media/x/secret.txt',
+    '<img srcset="/media/abc-1/320.webp 320w, /media/abc-1/640.webp 640w"><video data-src="/media/loop/clip.mp4"><audio src="/media/song/audio.mp3"> /media/x/secret.txt',
   );
   assert.deepEqual([...keys].sort(), [
     "abc-1/320.webp",
     "abc-1/640.webp",
     "loop/clip.mp4",
+    "song/audio.mp3",
   ]);
 });
 

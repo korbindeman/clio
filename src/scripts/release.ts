@@ -21,6 +21,9 @@ export interface ReleaseOptions {
   requiredPages: string[];
   // Extra variables for the static build.
   buildEnv?: Record<string, string>;
+  // Extra files written into the site after the build, by path, e.g.
+  // { _redirects: "/admin https://wip.example.com/admin 302\n" }.
+  files?: Record<string, string>;
   args?: string[];
 }
 
@@ -131,6 +134,11 @@ export async function release(options: ReleaseOptions) {
     throw new Error(`No content.json in ${snapshotDir}.`);
   await rm(siteDir, { recursive: true, force: true });
   build();
+  for (const [path, text] of Object.entries(options.files ?? {})) {
+    const target = join(siteDir, path);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, text);
+  }
   await copyMedia();
   const problems = verifyRelease(siteDir, options.requiredPages);
   for (const problem of problems) console.error(problem);

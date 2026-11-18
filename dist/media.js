@@ -8,11 +8,13 @@ const TYPES = {
     webp: "image/webp",
     jpg: "image/jpeg",
     mp4: "video/mp4",
+    mp3: "audio/mpeg",
 };
-// Serves one stored media file. Browsers ask for byte ranges to play and seek video.
+// Serves one stored media file. Browsers ask for byte ranges to play and seek
+// video and sound.
 export async function serveMedia(request, bucket, key, cacheControl) {
     const extension = key.split(".").pop();
-    const clip = extension === "mp4";
+    const clip = extension === "mp4" || extension === "mp3";
     const object = await bucket.get(key, clip ? { range: request.headers } : undefined);
     if (!object)
         return new Response(null, { status: 404 });
