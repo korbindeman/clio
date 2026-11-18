@@ -1,0 +1,109 @@
+{
+  "name": "@korbindeman/clio",
+  "version": "0.1.0",
+  "description": "A small CMS core for Astro sites on Cloudflare Workers: email sign-in, drafts and publishing in D1, media in R2, and static releases.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/korbindeman/clio.git"
+  },
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/integration.d.ts",
+      "default": "./dist/integration.js"
+    },
+    "./access": "./dist/access.js",
+    "./auth": "./dist/auth.js",
+    "./env": "./dist/env.js",
+    "./image": "./dist/image.js",
+    "./login": "./dist/login.js",
+    "./login-email": "./dist/loginEmail.js",
+    "./markdown": "./dist/markdown.js",
+    "./media": "./dist/media.js",
+    "./media-url": "./dist/mediaUrl.js",
+    "./middleware": "./dist/middleware.js",
+    "./published": "./dist/published.js",
+    "./d1": "./dist/serialD1.js",
+    "./share": "./dist/share.js",
+    "./snapshot": "./dist/snapshot.js",
+    "./store": "./dist/store.js",
+    "./upload": "./dist/upload.js",
+    "./worker": "./dist/worker.js",
+    "./release": "./dist/scripts/release.js",
+    "./verify-release": "./dist/scripts/verifyRelease.js",
+    "./deploy": "./dist/scripts/deploy.js",
+    "./admin/rich-text": "./dist/admin/richText.js",
+    "./admin/RichText.svelte": {
+      "types": "./dist/admin/RichText.svelte.d.ts",
+      "svelte": "./dist/admin/RichText.svelte",
+      "default": "./dist/admin/RichText.svelte"
+    },
+    "./admin/SignIn.svelte": {
+      "types": "./dist/admin/SignIn.svelte.d.ts",
+      "svelte": "./dist/admin/SignIn.svelte",
+      "default": "./dist/admin/SignIn.svelte"
+    },
+    "./routes/*": "./dist/routes/*",
+    "./migrations/*": "./migrations/*"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "tsc -p tsconfig.json --noEmit && svelte-check --tsconfig ./tsconfig.json",
+    "test": "node --test tests/*.test.ts",
+    "verify": "bun run build && bun run check && bun run test && node scripts/build.mjs --check"
+  },
+  "peerDependencies": {
+    "@astrojs/cloudflare": "^14.3.3",
+    "astro": "^7.3.5",
+    "better-auth": "^1.7.6",
+    "image-size": "^2.0.4",
+    "markdown-it": "^14.3.2",
+    "prosemirror-commands": "^1.7.2",
+    "prosemirror-history": "^1.5.1",
+    "prosemirror-inputrules": "^1.5.1",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-markdown": "^1.13.8",
+    "prosemirror-model": "^1.25.12",
+    "prosemirror-schema-list": "^1.5.1",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.42.6",
+    "svelte": "^5.46.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@astrojs/cloudflare": "^14.3.3",
+    "@cloudflare/workers-types": "^5.20260930.2",
+    "@types/markdown-it": "^14.2.0",
+    "@types/node": "^24.19.0",
+    "astro": "^7.3.5",
+    "better-auth": "^1.7.6",
+    "image-size": "^2.0.4",
+    "markdown-it": "^14.3.2",
+    "prosemirror-commands": "^1.7.2",
+    "prosemirror-history": "^1.5.1",
+    "prosemirror-inputrules": "^1.5.1",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-markdown": "^1.13.8",
+    "prosemirror-model": "^1.25.12",
+    "prosemirror-schema-list": "^1.5.1",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.42.6",
+    "sharp": "^0.35.5",
+    "svelte": "^5.46.0",
+    "svelte-check": "^4.7.6",
+    "svelte2tsx": "^0.7",
+    "typescript": "^6.0.3",
+    "zod": "^4.6.5"
+  },
+  "engines": {
+    "node": ">=24",
+    "bun": ">=1.4.3"
+  },
+  "packageManager": "bun@1.4.3"
+}
