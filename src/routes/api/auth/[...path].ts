@@ -8,6 +8,7 @@ const endpoints = new Map([
   ["sign-in/magic-link", "POST"],
   ["magic-link/verify", "GET"],
   ["sign-in/email-otp", "POST"],
+  ["sign-in/email", "POST"],
   ["sign-out", "POST"],
   ["get-session", "GET"],
 ]);

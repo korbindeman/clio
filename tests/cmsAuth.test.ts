@@ -568,3 +568,61 @@ test("five wrong codes invalidate the email code", async () => {
   assert.equal(sessionCookie(locked), undefined);
   f.database.close();
 });
+
+test("an editor signs in with a password set by the password script", async () => {
+  const { passwordSql } = await import("../src/scripts/password.ts");
+  const { hashPassword } = await import("../src/password.ts");
+  const f = setup();
+  const hash = await hashPassword("a long enough password");
+  assert.match(hash, /^pbkdf2-sha256\$100000\$/);
+  assert.ok(!hash.includes("a long enough password"));
+  f.database.exec(passwordSql(email, hash));
+  // Running it again replaces the password instead of adding a second one.
+  f.database.exec(passwordSql(email, hash));
+  assert.equal(
+    f.database
+      .prepare("SELECT COUNT(*) AS n FROM cms_auth_account WHERE providerId = 'credential'")
+      .get()!.n,
+    1,
+  );
+  const wrong = await f.request("sign-in/email", { email, password: "not the password" });
+  assert.equal(wrong.status, 401);
+  assert.equal(wrong.headers.get("set-cookie"), null);
+  const right = await f.request("sign-in/email", {
+    email: ` ${email.toUpperCase()} `,
+    password: "a long enough password",
+  });
+  assert.equal(right.status, 200);
+  assert.match(right.headers.get("set-cookie") ?? "", /session_token=/);
+});
+
+test("password sign-in refuses addresses outside the editors list, and sign-up stays closed", async () => {
+  const { passwordSql } = await import("../src/scripts/password.ts");
+  const { hashPassword } = await import("../src/password.ts");
+  const f = setup();
+  const stranger = "stranger@example.com";
+  f.database.exec(passwordSql(stranger, await hashPassword("a long enough password")));
+  const response = await f.request("sign-in/email", {
+    email: stranger,
+    password: "a long enough password",
+  }, "", "192.0.2.9");
+  assert.equal(response.status, 401);
+  const signUp = await f.request("sign-up/email", {
+    email: "new@example.com",
+    password: "a long enough password",
+    name: "New",
+  }, "", "192.0.2.10");
+  assert.notEqual(signUp.status, 200);
+  const reset = await f.request("request-password-reset", { email }, "", "192.0.2.11");
+  assert.notEqual(reset.status, 200);
+});
+
+test("password guesses are rate limited", async () => {
+  const f = setup();
+  const statuses: number[] = [];
+  for (let i = 0; i < 7; i++)
+    statuses.push(
+      (await f.request("sign-in/email", { email, password: `guess number ${i}` }, "", "192.0.2.20")).status,
+    );
+  assert.ok(statuses.includes(429), statuses.join(","));
+});
