@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import sharp from "sharp";
-import { inspectImage, readLimited } from "../src/upload.ts";
+import {
+  hasAudioTrack,
+  inspectAudio,
+  inspectImage,
+  readLimited,
+} from "../src/upload.ts";
 import { imageSchema } from "../src/image.ts";
 import { shareImage } from "../src/share.ts";
 import { publishable, visibleItems } from "../src/store.ts";
@@ -97,4 +102,21 @@ test("removed items are never part of the published snapshot", () => {
 test("a document that is not a list is published as it is", () => {
   const home = JSON.stringify({ marquee: "Hi", removed: true });
   assert.equal(publishable(home), home);
+});
+
+test("sound uploads are checked for an MP3 signature and MP4 audio tracks", () => {
+  const ascii = (text: string) => [...text].map((c) => c.charCodeAt(0));
+  // A minimal handler box: size, "hdlr", version/flags, pre_defined, type.
+  const mp4 = (handler: string) =>
+    new Uint8Array([
+      ...[0, 0, 0, 16, ...ascii("ftypisom")],
+      ...[0, 0, 0, 33, ...ascii("hdlr"), 0, 0, 0, 0, 0, 0, 0, 0],
+      ...ascii(handler),
+    ]);
+  assert.doesNotThrow(() => inspectAudio(new Uint8Array([...ascii("ID3"), 4])));
+  assert.doesNotThrow(() => inspectAudio(new Uint8Array([0xff, 0xfb, 0x90, 0])));
+  assert.throws(() => inspectAudio(mp4("soun")), /MP3/);
+  assert.throws(() => inspectAudio(new Uint8Array()), /MP3/);
+  assert.equal(hasAudioTrack(mp4("soun")), true);
+  assert.equal(hasAudioTrack(mp4("vide")), false);
 });

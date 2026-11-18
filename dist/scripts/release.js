@@ -82,6 +82,11 @@ export async function release(options) {
         throw new Error(`No content.json in ${snapshotDir}.`);
     await rm(siteDir, { recursive: true, force: true });
     build();
+    for (const [path, text] of Object.entries(options.files ?? {})) {
+        const target = join(siteDir, path);
+        await mkdir(dirname(target), { recursive: true });
+        await writeFile(target, text);
+    }
     await copyMedia();
     const problems = verifyRelease(siteDir, options.requiredPages);
     for (const problem of problems)

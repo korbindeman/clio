@@ -7,6 +7,7 @@ export interface ReleaseOptions {
     };
     requiredPages: string[];
     buildEnv?: Record<string, string>;
+    files?: Record<string, string>;
     args?: string[];
 }
 export declare function release(options: ReleaseOptions): Promise<void>;
