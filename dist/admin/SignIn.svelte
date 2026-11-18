@@ -35,6 +35,12 @@
     if (destination) params.set("next", destination);
     return `/login/?${params}`;
   });
+  // Local dev only: "admin" as the email signs straight in (routes/devLogin.ts).
+  const devAdmin = (value: string) =>
+    import.meta.env.DEV &&
+    value === "admin" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
+  const localDev = $derived(ready && devAdmin("admin"));
   onMount(() => {
     ready = true;
     if (approved && !demo)
@@ -71,6 +77,21 @@
     notice = "";
     try {
       email = email.trim().toLowerCase();
+      if (!demo && devAdmin(email)) {
+        // Local dev only: sign in as the first editor without an email.
+        const response = await fetch("/api/dev-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ next: destination }),
+        });
+        const result = (await response
+          .json()
+          .catch(() => ({}))) as { url?: string; error?: string };
+        if (!response.ok || !result.url)
+          throw new Error(result.error || "The local sign-in failed.");
+        window.location.assign(result.url);
+        return;
+      }
       if (!demo)
         await submit("sign-in/magic-link", {
           email,
@@ -160,19 +181,20 @@
     </div>
   {/if}
 {:else if step === "email"}
-  <form novalidate={demo} onsubmit={sendLink} aria-busy={busy}>
+  <form novalidate={demo || localDev} onsubmit={sendLink} aria-busy={busy}>
     <label for="email">Email</label>
     <input
       bind:this={emailInput}
       bind:value={email}
       id="email"
-      type={demo ? "text" : "email"}
+      type={demo || localDev ? "text" : "email"}
       autocomplete="email"
       required={!demo}
       maxlength={demo ? undefined : 254}
       readonly={busy || !ready}
       aria-describedby={error ? "login-error" : undefined}
     />
+    {#if localDev}<p class="note">Local: type admin to sign in without an email.</p>{/if}
     <button class="continue" type="submit" disabled={busy || !ready}
       >{busy ? "Sending link…" : "Continue"}<span aria-hidden="true">→</span
       ></button

@@ -70,6 +70,8 @@ The integration adds `/api/auth/*`, `/logout`, `/media/*` and the admin middlewa
 
 Locally (`astro dev` on localhost), no email is sent. The sign-in link and code are printed in the dev server log, and sign-ins are kept in `CMS_DB`.
 
+To skip even that, type `admin` as the email on the sign-in page. The dev server signs you in as the first address in `ADMIN_EMAILS` and shows the welcome screen. The shortcut route (`/api/dev-login`) is only injected by `astro dev` and answers 404 to anything but localhost, so builds never have it.
+
 ## Development
 
 ```sh

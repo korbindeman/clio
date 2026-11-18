@@ -7,6 +7,10 @@ export interface CmsOptions {
     pages?: string;
     release?: boolean;
 }
+export declare const DEV_ROUTES: {
+    pattern: string;
+    entrypoint: string;
+}[];
 export declare const CORE_ROUTES: {
     pattern: string;
     entrypoint: string;

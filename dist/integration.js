@@ -25,6 +25,10 @@ const SERVER_DEPS = [
 const VIRTUAL = "virtual:clio/config";
 // Routes every CMS site has. The site provides its own /login page, so it can
 // carry the site's look, using SignIn.svelte.
+// Local development only (`astro dev`): typing "admin" on the sign-in page signs in.
+export const DEV_ROUTES = [
+    { pattern: "/api/dev-login", entrypoint: `${PACKAGE}/routes/devLogin.js` },
+];
 export const CORE_ROUTES = [
     { pattern: "/api/auth/[...path]", entrypoint: `${PACKAGE}/routes/api/auth/[...path].js` },
     { pattern: "/logout", entrypoint: `${PACKAGE}/routes/logout.js` },
@@ -61,7 +65,7 @@ export default function cms(options) {
     return {
         name: PACKAGE,
         hooks: {
-            "astro:config:setup": ({ config, injectRoute, addMiddleware, updateConfig, }) => {
+            "astro:config:setup": ({ config, command, injectRoute, addMiddleware, updateConfig, }) => {
                 updateConfig({
                     vite: {
                         plugins: [
@@ -100,6 +104,9 @@ export default function cms(options) {
                     return;
                 for (const route of cmsRoutes(options.pages, fileURLToPath(config.root)))
                     injectRoute(route);
+                if (command === "dev")
+                    for (const route of DEV_ROUTES)
+                        injectRoute(route);
                 addMiddleware({ entrypoint: `${PACKAGE}/middleware`, order: "pre" });
             },
             // A release renders every public page at build time from the snapshot.

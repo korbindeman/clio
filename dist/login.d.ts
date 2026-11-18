@@ -1,5 +1,6 @@
 import type { CmsEnv } from "./env.ts";
 export declare const cmsEnv: () => CmsEnv;
+export declare const localLinks: Map<string, string>;
 export declare function loginAuth(request: Request): import("better-auth").Auth<{
     appName: string;
     baseURL: string;

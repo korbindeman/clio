@@ -4,6 +4,9 @@ import { createCmsAuth } from "./auth.js";
 import { describeClient, loginEmail } from "./loginEmail.js";
 import { serialiseD1 } from "./serialD1.js";
 export const cmsEnv = () => workerEnv;
+// Development only: the last sign-in link made for each address, so the local
+// dev sign-in (routes/devLogin.ts) can follow it without an email.
+export const localLinks = new Map();
 export function loginAuth(request) {
     const env = cmsEnv();
     const origin = new URL(request.url).origin;
@@ -38,6 +41,7 @@ export function loginAuth(request) {
             if (local) {
                 // Development only: no real email is sent. Production builds remove this branch.
                 console.info(JSON.stringify({ event: "local_login_link", email, url, otp }));
+                localLinks.set(email, url);
                 return;
             }
             try {

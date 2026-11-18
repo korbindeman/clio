@@ -7,6 +7,10 @@ import { serialiseD1 } from "./serialD1.ts";
 
 export const cmsEnv = () => workerEnv as unknown as CmsEnv;
 
+// Development only: the last sign-in link made for each address, so the local
+// dev sign-in (routes/devLogin.ts) can follow it without an email.
+export const localLinks = new Map<string, string>();
+
 export function loginAuth(request: Request) {
   const env = cmsEnv();
   const origin = new URL(request.url).origin;
@@ -52,6 +56,7 @@ export function loginAuth(request: Request) {
         console.info(
           JSON.stringify({ event: "local_login_link", email, url, otp }),
         );
+        localLinks.set(email, url);
         return;
       }
       try {
