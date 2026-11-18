@@ -5,7 +5,8 @@ import { isrMatch } from "./isr.ts";
 
 // Guards the admin pages and the admin API: a signed-in editor, and for
 // writes, a request from the site itself. Public pages listed in the `isr`
-// option are served from the edge cache until the next publication. The integration adds this outside a
+// option are served from the edge cache until the next publication or deploy:
+// the key carries both. The integration adds this outside a
 // static release only, since a release has no admin or CMS API.
 export const onRequest = defineMiddleware(async (context, next) => {
   const path = context.url.pathname;
@@ -17,7 +18,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       await Promise.all([import("./isr.ts"), import("./login.ts")]);
     return isrResponse(
       context.request,
-      () => contentVersion(cmsEnv().CMS_DB),
+      async () => `${config.build}.${await contentVersion(cmsEnv().CMS_DB)}`,
       edgeCache(),
       next,
     );

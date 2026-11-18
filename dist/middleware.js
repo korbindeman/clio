@@ -3,7 +3,8 @@ import config from "virtual:clio/config";
 import { isrMatch } from "./isr.js";
 // Guards the admin pages and the admin API: a signed-in editor, and for
 // writes, a request from the site itself. Public pages listed in the `isr`
-// option are served from the edge cache until the next publication. The integration adds this outside a
+// option are served from the edge cache until the next publication or deploy:
+// the key carries both. The integration adds this outside a
 // static release only, since a release has no admin or CMS API.
 export const onRequest = defineMiddleware(async (context, next) => {
     const path = context.url.pathname;
@@ -12,7 +13,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         if (!config.isr?.length || !isrMatch(path, config.isr))
             return next();
         const [{ isrResponse, contentVersion, edgeCache }, { cmsEnv }] = await Promise.all([import("./isr.js"), import("./login.js")]);
-        return isrResponse(context.request, () => contentVersion(cmsEnv().CMS_DB), edgeCache(), next);
+        return isrResponse(context.request, async () => `${config.build}.${await contentVersion(cmsEnv().CMS_DB)}`, edgeCache(), next);
     }
     const { withSerialisedAdmin } = await import("./serialD1.js");
     return withSerialisedAdmin(() => handleAdmin(context, next));

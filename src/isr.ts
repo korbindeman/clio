@@ -1,9 +1,11 @@
 // Incremental static regeneration for a live site (no WIP, no static release).
 //
 // A page listed in the `isr` option is rendered once and kept in the
-// Cloudflare edge cache. The cache key carries the time of the latest
-// publication, so publishing any document changes the key: the next visit
-// renders the page again and every visit after that is served from cache.
+// Cloudflare edge cache. The cache key carries the build id and the time of
+// the latest publication, so a deploy or publishing any document changes the
+// key: the next visit renders the page again and every visit after that is
+// served from cache. (Without the build id, a page cached before a deploy
+// would point at script files the deploy removed.)
 // Old entries are never read again and expire on their own.
 
 // "/archive/garments" matches that page; "/collections/*" matches every page
