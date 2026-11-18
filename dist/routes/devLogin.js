@@ -1,4 +1,5 @@
 import { allowedAdmin } from "../auth.js";
+import { approvalTarget } from "../approval.js";
 import { cmsEnv, localLinks, loginAuth } from "../login.js";
 import { serialiseD1 } from "../serialD1.js";
 export const prerender = false;
@@ -45,5 +46,10 @@ export const POST = async ({ request, url }) => {
     const link = localLinks.get(email);
     if (!link)
         return Response.json({ error: "The local sign-in link was not created." }, { status: 500 });
-    return Response.json({ url: link });
+    // The emailed link opens the tap-to-approve page; locally, go straight on.
+    const emailed = new URL(link);
+    const verify = approvalTarget(emailed.searchParams.get("approve"));
+    return Response.json({
+        url: verify ? new URL(verify, emailed.origin).toString() : link,
+    });
 };

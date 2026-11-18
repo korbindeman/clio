@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { allowedAdmin } from "../auth.ts";
+import { approvalTarget } from "../approval.ts";
 import { cmsEnv, localLinks, loginAuth } from "../login.ts";
 import { serialiseD1 } from "../serialD1.ts";
 export const prerender = false;
@@ -55,5 +56,10 @@ export const POST: APIRoute = async ({ request, url }) => {
       { error: "The local sign-in link was not created." },
       { status: 500 },
     );
-  return Response.json({ url: link });
+  // The emailed link opens the tap-to-approve page; locally, go straight on.
+  const emailed = new URL(link);
+  const verify = approvalTarget(emailed.searchParams.get("approve"));
+  return Response.json({
+    url: verify ? new URL(verify, emailed.origin).toString() : link,
+  });
 };
