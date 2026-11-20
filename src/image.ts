@@ -6,12 +6,12 @@ import { mediaUrl } from "./mediaUrl.ts";
 export const mediaId = z.string().regex(/^[a-zA-Z0-9-]{1,64}$/);
 export const variantSchema = z.object({
   width: z.number().int().positive().max(2560),
-  src: z.string().regex(/^\/media\/[a-zA-Z0-9-]{1,64}\/\d+\.webp$/),
+  src: z.string().regex(/^\/media\/[a-zA-Z0-9-]{1,64}\/\d+\.(?:webp|jpg)$/),
 });
 // A tiny blurred copy that paints before the real image arrives.
 export const placeholderSchema = z
   .string()
-  .regex(/^data:image\/webp;base64,[A-Za-z0-9+/=]{1,2000}$/);
+  .regex(/^data:image\/(?:webp|jpeg);base64,[A-Za-z0-9+/=]{1,2000}$/);
 // The fields an uploaded image carries in a document.
 export const imageFields = {
   id: mediaId,
@@ -35,7 +35,7 @@ export function imageProps(image: { variants: { width: number; src: string }[] }
 }
 
 const MEDIA =
-  /\/media\/([a-zA-Z0-9-]{1,64}\/(?:\d+\.webp|share\.jpg|clip\.mp4))/g;
+  /\/media\/([a-zA-Z0-9-]{1,64}\/(?:\d+\.(?:webp|jpg)|share\.jpg|clip\.mp4))/g;
 
 // Every media key a built page or file refers to, e.g. "abc/640.webp".
 export function mediaKeysIn(text: string): Set<string> {

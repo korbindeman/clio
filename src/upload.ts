@@ -80,16 +80,19 @@ export async function readImageForm(form: FormData, id: string) {
     const file = form.get(String(size));
     if (!(file instanceof File) || file.size > 5 * 1024 * 1024)
       throw new Error("An image preview is missing or too large.");
+    // WebP, or JPEG from browsers that cannot encode WebP (Safari).
     const dimensions = inspectImage(new Uint8Array(await file.arrayBuffer()), [
       "webp",
+      "jpg",
     ]);
     if (
       dimensions.width !== size ||
       Math.abs(dimensions.height - Math.round((height * size) / width)) > 1
     )
       throw new Error("An image preview has invalid dimensions.");
-    const key = `${id}/${size}.webp`;
-    objects.push({ key, file, type: "image/webp" });
+    const webp = dimensions.type === "webp";
+    const key = `${id}/${size}.${webp ? "webp" : "jpg"}`;
+    objects.push({ key, file, type: webp ? "image/webp" : "image/jpeg" });
     variants.push({ width: size, src: `/media/${key}` });
   }
   const placeholder = placeholderSchema.safeParse(form.get("placeholder"));

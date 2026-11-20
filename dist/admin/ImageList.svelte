@@ -5,7 +5,7 @@
   // reports what the editor did. Style it with the --image-list-* variables
   // or by targeting .image-list from the page.
   import { justifiedLayout } from "../gallery.js";
-  import { IMAGE_TYPES } from "./uploadImage.js";
+  import { IMAGE_TYPES, isImageFile } from "./uploadImage.js";
 
   interface ListItem {
     key: string;
@@ -74,7 +74,7 @@
 
   const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes("Files");
   const images = (files: FileList | null | undefined) =>
-    [...(files ?? [])].filter((f) => IMAGE_TYPES.split(",").includes(f.type));
+    [...(files ?? [])].filter(isImageFile);
 
   function dragStart(e: DragEvent, index: number) {
     if (disabled) return e.preventDefault();
