@@ -28,7 +28,7 @@ export function imageProps(image) {
         srcset: variants.map((v) => `${mediaUrl(v.src)} ${v.width}w`).join(", "),
     };
 }
-const MEDIA = /\/media\/([a-zA-Z0-9-]{1,64}\/(?:\d+\.(?:webp|jpg)|share\.jpg|clip\.mp4))/g;
+const MEDIA = /\/media\/([a-zA-Z0-9-]{1,64}\/(?:\d+\.(?:webp|jpg)|share\.jpg|clip\.mp4|audio\.mp3))/g;
 // Every media key a built page or file refers to, e.g. "abc/640.webp".
 export function mediaKeysIn(text) {
     return new Set([...text.matchAll(MEDIA)].map((match) => match[1]));

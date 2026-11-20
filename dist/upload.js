@@ -112,3 +112,22 @@ export function inspectClip(bytes) {
     if (new TextDecoder().decode(bytes.subarray(4, 8)) !== "ftyp")
         throw new Error("Use an MP4 preview.");
 }
+const ascii = (bytes, at) => String.fromCharCode(bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]);
+// An MP4 with sound has a track whose handler ("hdlr" box) is "soun".
+export function hasAudioTrack(bytes) {
+    for (let at = 4; at + 12 <= bytes.length; at++)
+        if (bytes[at] === 0x68 &&
+            ascii(bytes, at) === "hdlr" &&
+            ascii(bytes, at + 12) === "soun")
+            return true;
+    return false;
+}
+// Static releases reject files above 25 MiB, so a sound file stays below it.
+export const MAX_AUDIO = 25 * 1024 * 1024;
+export function inspectAudio(bytes) {
+    // An MP3 starts with an ID3 tag or an MPEG audio frame sync.
+    const id3 = bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33;
+    const frame = bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0;
+    if (bytes.length < 4 || !(id3 || frame))
+        throw new Error("Use an MP3 file.");
+}

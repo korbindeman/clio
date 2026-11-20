@@ -19,3 +19,6 @@ export declare function readImageForm(form: FormData, id: string): Promise<{
 }>;
 export declare const MAX_CLIP: number;
 export declare function inspectClip(bytes: Uint8Array): void;
+export declare function hasAudioTrack(bytes: Uint8Array): boolean;
+export declare const MAX_AUDIO: number;
+export declare function inspectAudio(bytes: Uint8Array): void;

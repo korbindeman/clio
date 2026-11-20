@@ -109,3 +109,20 @@ test("neighbouring lists of one kind join, as Markdown would render them", () =>
   ).state;
   assert.equal(serializeMarkdown(next.doc), "- Rice\n- Coconut\n\n1. Shake");
 });
+
+test("++text++ is underlined, and the editor keeps it", () => {
+  assert.equal(
+    renderMarkdown("An ++underlined++ word, **++both++**, and C++ stays."),
+    "<p>An <u>underlined</u> word, <strong><u>both</u></strong>, and C++ stays.</p>\n",
+  );
+  assert.equal(markdownText("An ++underlined++ word"), "An underlined word");
+  for (const source of ["An ++underlined++ word", "*++Both++* at once"])
+    assert.equal(serializeMarkdown(parseMarkdown(source)), source);
+  // Typed "++" is plain text, not an underline.
+  const typed = schema.node("doc", null, [
+    schema.node("paragraph", null, [schema.text("a ++b++ c")]),
+  ]);
+  const written = serializeMarkdown(typed);
+  assert.equal(renderMarkdown(written), "<p>a ++b++ c</p>\n");
+  assert.equal(serializeMarkdown(parseMarkdown(written)), written);
+});

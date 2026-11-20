@@ -41,7 +41,7 @@
     onchange: (value: string) => void;
   } = $props();
   const id = $props.id();
-  const { strong, em, link } = schema.marks;
+  const { strong, em, underline, link } = schema.marks;
   const { bullet_list, ordered_list, list_item, hard_break } = schema.nodes;
   let element: HTMLDivElement;
   let view: EditorView | undefined;
@@ -51,6 +51,7 @@
   let active = $state({
     strong: false,
     em: false,
+    underline: false,
     link: false,
     bullet: false,
     ordered: false,
@@ -122,6 +123,7 @@
   const tools = [
     { name: "Bold", state: "strong", command: toggleMark(strong) },
     { name: "Italic", state: "em", command: toggleMark(em) },
+    { name: "Underline", state: "underline", command: toggleMark(underline) },
     { name: "List", state: "bullet", command: toggleList(bullet_list) },
     {
       name: "Numbered list",
@@ -147,6 +149,7 @@
           "Mod-y": redo,
           "Mod-b": toggleMark(strong),
           "Mod-i": toggleMark(em),
+          "Mod-u": toggleMark(underline),
           "Mod-k": () => (openLink(), true),
           "Shift-Enter": lineBreak,
           Enter: splitListItem(list_item),
@@ -169,6 +172,7 @@
     active = {
       strong: markActive(view.state, strong),
       em: markActive(view.state, em),
+      underline: markActive(view.state, underline),
       link: markActive(view.state, link),
       bullet: list?.type === bullet_list,
       ordered: list?.type === ordered_list,
