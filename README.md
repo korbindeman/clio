@@ -17,7 +17,17 @@ The site keeps its own content model, admin pages and look. This package handles
 
 ## How a site is set up
 
-A site runs as two Workers built from the same code:
+A site runs in one of two shapes.
+
+**One live Worker** (simplest). The admin, sign-in, media and public pages all run on the site's own domain, without `PRIVATE_PREVIEW`. Pages without CMS content stay prerendered. Pages that show content are server-rendered and listed in the `isr` option: each one is rendered once and kept in Cloudflare's edge cache, and the cache key carries the time of the latest publication, so publishing changes the key and the next visit renders fresh. No purge setup is needed.
+
+```js
+cms({ /* … */, isr: ["/", "/archive/garments", "/collections/*"] })
+```
+
+A cached page sends `Cache-Control: public, max-age=0, must-revalidate` to browsers and `X-Clio-Cache: hit` or `miss`. Requests with a query string, and responses that set a cookie, are private, or fail, are never cached.
+
+**Preview plus production**, two Workers built from the same code:
 
 - **Preview (WIP).** The CMS lives here. Editors sign in, upload, and publish. `PRIVATE_PREVIEW=true` keeps it behind sign-in. Public pages are rendered on request from the published content in D1, so publishing takes effect immediately.
 - **Production.** Either the same Worker without `PRIVATE_PREVIEW`, or a static release. A static release is built from the preview site's published content and media and has no admin, auth or API routes.
@@ -73,6 +83,11 @@ Locally (`astro dev` on localhost), no email is sent. The sign-in link and code 
 To skip even that, type `admin` as the email on the sign-in page. The dev server signs you in as the first address in `ADMIN_EMAILS` and shows the welcome screen. The shortcut route (`/api/dev-login`) is only injected by `astro dev` and answers 404 to anything but localhost, so builds never have it.
 
 ## Development
+
+`bun run test:browser` runs the admin's photo uploads in Chromium, WebKit
+(Safari's engine) and Firefox with real-world files (a phone photo over 20 MB,
+a huge PNG, a transparent cut-out), with and without WebP encoding, and checks
+that the server accepts what each browser sends. CI runs it on every push.
 
 ```sh
 bun install

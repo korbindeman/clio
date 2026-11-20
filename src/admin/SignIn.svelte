@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick, onMount, onDestroy } from "svelte";
+  import { approvalTarget } from "../approval.js";
   let {
     demo = false,
     destination = "/admin/",
@@ -18,7 +19,8 @@
   onDestroy(() => clearTimeout(welcomeTimer));
   let email = $state("");
   let code = $state("");
-  let step = $state<"email" | "sent" | "welcome">(
+  let password = $state("");
+  let step = $state<"email" | "sent" | "approve" | "welcome">(
     approved ? "welcome" : "email",
   );
   let busy = $state(false);
@@ -29,6 +31,8 @@
   let resendAt = $state(0);
   let now = $state(Date.now());
   let emailInput = $state<HTMLInputElement>();
+  // Set when the page was opened from the emailed link (see approvalPage).
+  let approveTarget = $state<string | null>(null);
   const remaining = $derived(Math.max(0, Math.ceil((resendAt - now) / 1000)));
   const callbackURL = $derived.by(() => {
     const params = new URLSearchParams({ approved: "1" });
@@ -43,6 +47,12 @@
   const localDev = $derived(ready && devAdmin("admin"));
   onMount(() => {
     ready = true;
+    if (!approved && !demo) {
+      approveTarget = approvalTarget(
+        new URLSearchParams(window.location.search).get("approve"),
+      );
+      if (approveTarget) step = "approve";
+    }
     if (approved && !demo)
       welcomeTimer = setTimeout(
         () => window.location.assign(destination),
@@ -77,6 +87,7 @@
     notice = "";
     try {
       email = email.trim().toLowerCase();
+      if (!email) throw new Error("Enter your email first.");
       if (!demo && devAdmin(email)) {
         // Local dev only: sign in as the first editor without an email.
         const response = await fetch("/api/dev-login", {
@@ -107,6 +118,48 @@
       error =
         e instanceof Error ? e.message : "Check your connection and try again.";
     } finally {
+      busy = false;
+    }
+  }
+  async function signInWithPassword(event: SubmitEvent) {
+    event.preventDefault();
+    if (busy) return;
+    email = email.trim().toLowerCase();
+    if (!demo && devAdmin(email)) return sendLink();
+    if (!email || !password) {
+      error = "Enter your email and password.";
+      return;
+    }
+    busy = true;
+    verifying = true;
+    error = "";
+    notice = "";
+    try {
+      if (!demo) {
+        const response = await fetch("/api/auth/sign-in/email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (response.status === 429)
+          throw new Error("Too many attempts. Wait one minute, then try again.");
+        if (!response.ok) {
+          if (response.status >= 500)
+            throw new Error("Sign-in is unavailable. Please try again later.");
+          throw new Error("That email and password don't match.");
+        }
+        password = "";
+        window.location.assign(callbackURL);
+        return;
+      }
+      step = "welcome";
+      await tick();
+      document.getElementById("welcome")?.focus();
+    } catch (e) {
+      error =
+        e instanceof Error ? e.message : "Check your connection and try again.";
+    } finally {
+      verifying = false;
       busy = false;
     }
   }
@@ -180,8 +233,14 @@
       <button type="button" onclick={changeEmail}>Start again</button>
     </div>
   {/if}
+{:else if step === "approve" && approveTarget}
+  <h1>Sign in</h1>
+  <p class="note">Select Sign in to finish signing in on this device.</p>
+  <a class="continue" href={approveTarget}
+    >Sign in<span aria-hidden="true">→</span></a
+  >
 {:else if step === "email"}
-  <form novalidate={demo || localDev} onsubmit={sendLink} aria-busy={busy}>
+  <form novalidate={demo || localDev} onsubmit={signInWithPassword} aria-busy={busy}>
     <label for="email">Email</label>
     <input
       bind:this={emailInput}
@@ -195,11 +254,29 @@
       aria-describedby={error ? "login-error" : undefined}
     />
     {#if localDev}<p class="note">Local: type admin to sign in without an email.</p>{/if}
+    <label for="password">Password</label>
+    <input
+      bind:value={password}
+      id="password"
+      type="password"
+      autocomplete="current-password"
+      maxlength={128}
+      readonly={busy || !ready}
+      aria-describedby={error ? "login-error" : undefined}
+    />
     <button class="continue" type="submit" disabled={busy || !ready}
-      >{busy ? "Sending link…" : "Continue"}<span aria-hidden="true">→</span
+      >{verifying ? "Signing in…" : "Sign in"}<span aria-hidden="true">→</span
       ></button
     >
   </form>
+  <div class="actions">
+    <button
+      type="button"
+      onclick={() => sendLink()}
+      disabled={busy || !ready || remaining > 0}
+      >{remaining > 0 ? `Email me a code in ${remaining}s` : "Email me a code instead"}</button
+    >
+  </div>
 {:else}
   <h1>Check your email</h1>
   <p class="note" id="link-note">
@@ -288,6 +365,9 @@
     padding: 12px 14px;
     font: inherit;
     font-size: 18px;
+  }
+  input + label {
+    margin-top: 16px;
   }
   input:focus-visible {
     border-color: #222;

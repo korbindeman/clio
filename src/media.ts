@@ -12,6 +12,7 @@ function contentRange(range: R2Range, size: number) {
 const TYPES: Record<string, string> = {
   webp: "image/webp",
   jpg: "image/jpeg",
+  png: "image/png",
   mp4: "video/mp4",
   mp3: "audio/mpeg",
 };

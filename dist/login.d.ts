@@ -17,6 +17,16 @@ export declare function loginAuth(request: Request): import("better-auth").Auth<
     verification: {
         modelName: "cms_auth_verification";
     };
+    emailAndPassword: {
+        enabled: true;
+        disableSignUp: true;
+        minPasswordLength: number;
+        maxPasswordLength: number;
+        password: {
+            hash: typeof import("./password.ts").hashPassword;
+            verify: typeof import("./password.ts").verifyPassword;
+        };
+    };
     session: {
         modelName: "cms_auth_session";
         expiresIn: number;
@@ -57,6 +67,10 @@ export declare function loginAuth(request: Request): import("better-auth").Auth<
                 max: number;
             };
             "/sign-in/email-otp": {
+                window: number;
+                max: number;
+            };
+            "/sign-in/email": {
                 window: number;
                 max: number;
             };

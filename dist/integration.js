@@ -61,6 +61,10 @@ export default function cms(options) {
         appName: options.appName,
         cookiePrefix: options.cookiePrefix,
         documents: options.documents,
+        isr: options.isr ?? [],
+        // A new id for every build, so ISR pages cached by an earlier deploy
+        // (which point at that build's script files) are never served again.
+        build: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     };
     return {
         name: PACKAGE,
