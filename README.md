@@ -84,6 +84,11 @@ To skip even that, type `admin` as the email on the sign-in page. The dev server
 
 ## Development
 
+`bun run test:browser` runs the admin's photo uploads in Chromium, WebKit
+(Safari's engine) and Firefox with real-world files (a phone photo over 20 MB,
+a huge PNG, a transparent cut-out), with and without WebP encoding, and checks
+that the server accepts what each browser sends. CI runs it on every push.
+
 ```sh
 bun install
 bun run verify   # build, type check, tests, and a check that dist/ is committed up to date
