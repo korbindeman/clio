@@ -101,7 +101,12 @@ async function decode(file: File): Promise<{ bitmap: ImageBitmap; reduced: boole
 // The original to keep, and its size. Anything the server can't store as it
 // is (HEIC, AVIF, huge files or dimensions) is redrawn as a high-quality JPEG
 // in the browser, so any photo the browser can open can be uploaded.
-async function prepareOriginal(file: File, bitmap: ImageBitmap, reduced: boolean) {
+async function prepareOriginal(
+  file: File,
+  bitmap: ImageBitmap,
+  reduced: boolean,
+  alpha: boolean,
+) {
   const pixels = bitmap.width * bitmap.height;
   const keep =
     !reduced &&
@@ -112,11 +117,23 @@ async function prepareOriginal(file: File, bitmap: ImageBitmap, reduced: boolean
   const scale = Math.min(1, Math.sqrt(MAX_CANVAS / pixels));
   const width = Math.max(1, Math.round(bitmap.width * scale));
   const height = Math.max(1, Math.round(bitmap.height * scale));
-  for (const quality of [0.92, 0.85, 0.75]) {
-    const blob = await draw(bitmap, width, height, "image/jpeg", quality);
-    if (blob.size <= KEEP_ORIGINAL)
-      return { blob, width, height, name: file.name.replace(/\.[^.]*$/, "") + ".jpg" };
-  }
+  const base = file.name.replace(/\.[^.]*$/, "");
+  if (alpha) {
+    // Cut-outs keep their transparency: WebP where the browser can, else PNG,
+    // which is lossless, so only a smaller size makes it smaller.
+    const type = (await encodesWebp()) ? "image/webp" : "image/png";
+    for (const factor of [1, 0.75, 0.5, 0.35]) {
+      const w = Math.max(1, Math.round(width * factor));
+      const h = Math.max(1, Math.round(height * factor));
+      const blob = await draw(bitmap, w, h, type, 0.92);
+      if (blob.size <= KEEP_ORIGINAL)
+        return { blob, width: w, height: h, name: `${base}.${type === "image/png" ? "png" : "webp"}` };
+    }
+  } else
+    for (const quality of [0.92, 0.85, 0.75]) {
+      const blob = await draw(bitmap, width, height, "image/jpeg", quality);
+      if (blob.size <= KEEP_ORIGINAL) return { blob, width, height, name: `${base}.jpg` };
+    }
   throw new Error(`${file.name} is too detailed to upload. Try a smaller export.`);
 }
 const blobToDataUrl = (blob: Blob) =>
@@ -140,14 +157,21 @@ export async function uploadImage<D>(
   revision: number,
   progress: (value: string) => void = () => {},
   fields: Record<string, string> = {},
+  // alpha: a cut-out with transparency. Its copies stay transparent: WebP,
+  // or PNG in browsers that cannot encode WebP, never JPEG.
+  { alpha = false }: { alpha?: boolean } = {},
 ): Promise<D> {
   if (!isImageFile(file)) throw new Error(`${file.name}: choose a photo.`);
   progress("Preparing…");
   const { bitmap, reduced } = await decode(file);
   try {
-    const original = await prepareOriginal(file, bitmap, reduced);
-    const variantType = (await encodesWebp()) ? "image/webp" : "image/jpeg";
-    const extension = variantType === "image/webp" ? "webp" : "jpg";
+    const original = await prepareOriginal(file, bitmap, reduced, alpha);
+    const variantType = (await encodesWebp())
+      ? "image/webp"
+      : alpha
+        ? "image/png"
+        : "image/jpeg";
+    const extension = variantType.slice("image/".length).replace("jpeg", "jpg");
     const sized = (width: number) =>
       Math.max(1, Math.round((original.height * width) / original.width));
     const form = new FormData();
@@ -164,10 +188,15 @@ export async function uploadImage<D>(
       );
     const share = shareImage("", original.width, original.height);
     form.append("share", await draw(bitmap, share.width, share.height, "image/jpeg", 0.82), "share.jpg");
-    form.append(
-      "placeholder",
-      await blobToDataUrl(await draw(bitmap, 24, sized(24), variantType, 0.4)),
-    );
+    // A tiny blurred stand-in; PNG needs fewer pixels to stay small.
+    let placeholder = "";
+    for (const width of [24, 16, 10]) {
+      placeholder = await blobToDataUrl(
+        await draw(bitmap, width, sized(width), variantType, 0.4),
+      );
+      if (placeholder.length <= 2000) break;
+    }
+    form.append("placeholder", placeholder);
     return await send<D>(path, form, progress);
   } finally {
     bitmap.close();

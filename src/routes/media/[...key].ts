@@ -7,7 +7,7 @@ export const prerender = false;
 export const GET: APIRoute = async ({ request, params }) => {
   const key = params.key ?? "";
   if (
-    !/^[a-zA-Z0-9-]{1,64}\/(?:\d+\.(?:webp|jpg)|share\.jpg|clip\.mp4|audio\.mp3)$/.test(
+    !/^[a-zA-Z0-9-]{1,64}\/(?:\d+\.(?:webp|jpg|png)|share\.jpg|clip\.mp4|audio\.mp3)$/.test(
       key,
     )
   )

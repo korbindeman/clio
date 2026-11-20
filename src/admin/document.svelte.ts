@@ -162,7 +162,12 @@ export class EditableDocument<T> {
 
   // Uploads photos one by one to `path`; each one lands in the draft as soon
   // as it is stored, so a later failure never loses the earlier ones.
-  upload(files: File[], path: string, fields: Record<string, string> = {}) {
+  upload(
+    files: File[],
+    path: string,
+    fields: Record<string, string> = {},
+    options: { alpha?: boolean } = {},
+  ) {
     return this.run(async () => {
       let count = 0;
       try {
@@ -178,6 +183,7 @@ export class EditableDocument<T> {
               this.revision,
               (s) => (this.status = `${label} · ${s}`),
               fields,
+              options,
             ),
           );
           count++;

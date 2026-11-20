@@ -10,7 +10,7 @@ export async function receiveImageUpload(request, documentId, actor, change) {
     const env = cmsEnv();
     const bytes = await readLimited(request, MAX_UPLOAD);
     if (!bytes)
-        return Response.json({ error: "Upload exceeds 40 MB. Choose a smaller original." }, { status: 413 });
+        return Response.json({ error: "Upload exceeds 64 MB. Choose a smaller original." }, { status: 413 });
     const id = crypto.randomUUID();
     let form;
     let revision;

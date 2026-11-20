@@ -37,7 +37,9 @@ export declare class EditableDocument<T> {
     private saveNow;
     save(message?: string): Promise<void>;
     publish(message?: string): Promise<void>;
-    upload(files: File[], path: string, fields?: Record<string, string>): Promise<void>;
+    upload(files: File[], path: string, fields?: Record<string, string>, options?: {
+        alpha?: boolean;
+    }): Promise<void>;
     beforeUnload: (event: BeforeUnloadEvent) => void;
 }
 export {};

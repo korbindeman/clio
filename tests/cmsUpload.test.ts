@@ -113,16 +113,18 @@ test("display sizes may be JPEG, for browsers that cannot encode WebP (Safari)",
   const form = new FormData();
   form.append("original", new File([await make(400, 200, "png")], "o.png"));
   form.append("320", new File([await make(320, 160, "jpeg")], "320.jpg"));
-  form.append("400", new File([await make(400, 200, "webp")], "400.webp"));
+  form.append("400", new File([await make(400, 200, "png")], "400.png"));
   const share = shareImage("x", 400, 200);
   form.append("share", new File([await make(share.width, share.height, "jpeg")], "share.jpg"));
   form.append("placeholder", "data:image/jpeg;base64,/9j/4AAQ");
   const read = await readImageForm(form, "abc");
   assert.deepEqual(
     read.variants.map((v) => v.src),
-    ["/media/abc/320.jpg", "/media/abc/400.webp"],
+    ["/media/abc/320.jpg", "/media/abc/400.png"],
   );
   assert.ok(read.objects.some((o) => o.key === "abc/320.jpg" && o.type === "image/jpeg"));
+  // PNG: a transparent cut-out from a browser without WebP encoding.
+  assert.ok(read.objects.some((o) => o.key === "abc/400.png" && o.type === "image/png"));
   const parsed = imageSchema.safeParse({
     id: "abc",
     width: 400,

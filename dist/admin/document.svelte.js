@@ -150,7 +150,7 @@ export class EditableDocument {
     }
     // Uploads photos one by one to `path`; each one lands in the draft as soon
     // as it is stored, so a later failure never loses the earlier ones.
-    upload(files, path, fields = {}) {
+    upload(files, path, fields = {}, options = {}) {
         return this.run(async () => {
             let count = 0;
             try {
@@ -159,7 +159,7 @@ export class EditableDocument {
                     const label = files.length > 1 ? `Photo ${index + 1} of ${files.length}` : "Photo";
                     await this.saveNow();
                     this.remember();
-                    this.apply(await uploadImage(path, file, this.revision, (s) => (this.status = `${label} · ${s}`), fields));
+                    this.apply(await uploadImage(path, file, this.revision, (s) => (this.status = `${label} · ${s}`), fields, options));
                     count++;
                 }
                 this.message = `${count === 1 ? "Photo" : `${count} photos`} added. Publish when you're happy.`;

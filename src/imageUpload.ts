@@ -25,7 +25,7 @@ export async function receiveImageUpload(
   const bytes = await readLimited(request, MAX_UPLOAD);
   if (!bytes)
     return Response.json(
-      { error: "Upload exceeds 40 MB. Choose a smaller original." },
+      { error: "Upload exceeds 64 MB. Choose a smaller original." },
       { status: 413 },
     );
   const id = crypto.randomUUID();
