@@ -14,13 +14,17 @@ import { createInterface } from "node:readline";
 import { MIN_PASSWORD_LENGTH, hashPassword } from "../password.js";
 const quote = (value) => `'${value.replaceAll("'", "''")}'`;
 // The SQL that gives `email` this password hash, creating the editor if they
-// have never signed in. Any earlier password is replaced.
+// have never signed in. Any earlier password is replaced. Whoever runs this
+// has the site's database, which vouches for the address: an editor row that
+// is already there but unverified (a code was asked for and never used) is
+// marked verified, or the sign-in would succeed and every admin request after
+// it would still be refused.
 export function passwordSql(email, hash, now = new Date()) {
     const at = quote(now.toISOString());
     const address = quote(email);
     const user = `(SELECT id FROM cms_auth_user WHERE email = ${address})`;
     return [
-        `INSERT INTO cms_auth_user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (${quote(crypto.randomUUID())}, '', ${address}, 1, ${at}, ${at}) ON CONFLICT(email) DO NOTHING;`,
+        `INSERT INTO cms_auth_user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (${quote(crypto.randomUUID())}, '', ${address}, 1, ${at}, ${at}) ON CONFLICT(email) DO UPDATE SET emailVerified = 1, updatedAt = excluded.updatedAt;`,
         `DELETE FROM cms_auth_account WHERE providerId = 'credential' AND userId = ${user};`,
         `INSERT INTO cms_auth_account (id, accountId, providerId, userId, password, createdAt, updatedAt) SELECT ${quote(crypto.randomUUID())}, id, 'credential', id, ${quote(hash)}, ${at}, ${at} FROM cms_auth_user WHERE email = ${address};`,
         // Signing in elsewhere with the old password stops working at once.
