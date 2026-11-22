@@ -138,8 +138,18 @@ export class EditableDocument {
         }
     }
     async saveNow() {
-        if (this.dirty && this.revision)
-            this.apply(await this.request(this.path, "PUT", { revision: this.revision, draft: this.draft }));
+        if (!this.dirty || !this.revision)
+            return;
+        const sent = JSON.stringify(this.draft);
+        const wire = await this.request(this.path, "PUT", { revision: this.revision, draft: this.draft });
+        if (JSON.stringify(this.draft) === sent)
+            return this.apply(wire);
+        // Changed while it was saving (an undo, more typing): keep the newer
+        // draft, so it is still dirty and the next save sends it.
+        this.saved = JSON.stringify(wire.draft);
+        this.revision = wire.revision;
+        this.publishedAt = wire.publishedAt;
+        this.unpublished = wire.hasChanges;
     }
     save(message = "Saved. The live site has not changed yet.") {
         return this.run(async () => {

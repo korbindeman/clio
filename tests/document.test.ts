@@ -24,12 +24,14 @@ before(async () => {
 });
 after(() => rmSync(dir, { recursive: true, force: true }));
 
-// A server that keeps one draft and fails the next `failures` saves.
-function server(failures = 0) {
+// A server that keeps one draft, fails the next `failures` saves and takes
+// `delay` ms to answer a save.
+function server(failures = 0, delay = 0) {
   const state = { draft: { title: "a" }, revision: 1, puts: 0 };
   globalThis.fetch = (async (_path: string, init?: RequestInit) => {
     if (init?.method === "PUT") {
       state.puts++;
+      await wait(delay);
       if (failures > 0) {
         failures--;
         return new Response(JSON.stringify({ error: "Offline" }), { status: 503 });
@@ -75,4 +77,21 @@ test("after a failed flush, later autosaves still save", async () => {
   await doc.flush();
   assert.equal(state.draft.title, "d");
   assert.equal(state.puts, 3);
+});
+
+test("a change made while a save is on its way is kept and saved next", async () => {
+  const state = server(0, 50);
+  const doc = new EditableDocument("page", "/api/admin/page");
+  await doc.load();
+  doc.change((d: any) => (d.title = "b"), 10_000);
+  const first = doc.flush();
+  await wait(10); // "b" is on its way
+  doc.undo(); // back to "a" before the server answers
+  const second = doc.flush();
+  await first;
+  assert.equal(doc.draft.title, "a", "the undo is not overwritten by the answer");
+  await second;
+  assert.equal(state.draft.title, "a");
+  assert.equal(doc.dirty, false);
+  assert.equal(doc.saveState, "saved");
 });
