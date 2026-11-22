@@ -104,13 +104,21 @@ export class EditableDocument {
             });
         }, wait);
     }
-    // Waits for a pending autosave.
+    // Saves a pending change now and waits for it. Throws if that save fails,
+    // but the queue itself never rejects, so later autosaves still run.
     async flush() {
-        if (this.saveState === "saving") {
-            clearTimeout(this.timer);
-            this.queue = this.queue.then(() => this.saveNow());
-        }
-        await this.queue;
+        if (this.saveState !== "saving")
+            return this.queue;
+        clearTimeout(this.timer);
+        const save = this.queue.then(() => this.saveNow());
+        this.queue = save.then(() => {
+            this.error = "";
+            this.saveState = "saved";
+        }, (e) => {
+            this.error = e instanceof Error ? e.message : String(e);
+            this.saveState = "error";
+        });
+        await save;
     }
     async run(task) {
         if (this.busy)
@@ -130,8 +138,18 @@ export class EditableDocument {
         }
     }
     async saveNow() {
-        if (this.dirty && this.revision)
-            this.apply(await this.request(this.path, "PUT", { revision: this.revision, draft: this.draft }));
+        if (!this.dirty || !this.revision)
+            return;
+        const sent = JSON.stringify(this.draft);
+        const wire = await this.request(this.path, "PUT", { revision: this.revision, draft: this.draft });
+        if (JSON.stringify(this.draft) === sent)
+            return this.apply(wire);
+        // Changed while it was saving (an undo, more typing): keep the newer
+        // draft, so it is still dirty and the next save sends it.
+        this.saved = JSON.stringify(wire.draft);
+        this.revision = wire.revision;
+        this.publishedAt = wire.publishedAt;
+        this.unpublished = wire.hasChanges;
     }
     save(message = "Saved. The live site has not changed yet.") {
         return this.run(async () => {
