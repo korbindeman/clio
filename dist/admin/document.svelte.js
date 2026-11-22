@@ -156,10 +156,17 @@ export class EditableDocument {
             try {
                 await this.flush();
                 for (const [index, file] of files.entries()) {
-                    const label = files.length > 1 ? `Photo ${index + 1} of ${files.length}` : "Photo";
+                    const label = files.length > 1 ? ` ${index + 1} of ${files.length}` : "";
                     await this.saveNow();
                     this.remember();
-                    this.apply(await uploadImage(path, file, this.revision, (s) => (this.status = `${label} · ${s}`), fields, options));
+                    this.apply(await uploadImage(path, file, this.revision, 
+                    // "Preparing photo…", "Uploading photo 2 of 3: 40%"
+                    (s) => {
+                        const percent = /(\d+%)/.exec(s)?.[1];
+                        this.status = percent
+                            ? `Uploading photo${label}: ${percent}`
+                            : `${s.replace(/…$/, "")} photo${label}…`;
+                    }, fields, options));
                     count++;
                 }
                 this.message = `${count === 1 ? "Photo" : `${count} photos`} added. Publish when you're happy.`;
