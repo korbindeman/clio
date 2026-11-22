@@ -596,6 +596,27 @@ test("an editor signs in with a password set by the password script", async () =
   assert.match(right.headers.get("set-cookie") ?? "", /session_token=/);
 });
 
+test("a password set for an editor already there but unverified lets them into the admin", async () => {
+  const { passwordSql } = await import("../src/scripts/password.ts");
+  const { hashPassword } = await import("../src/password.ts");
+  const f = setup();
+  // They asked for a code once and never used it: their row is unverified.
+  f.database.prepare("UPDATE cms_auth_user SET emailVerified = 0 WHERE email = ?").run(email);
+  const earlier = f.database.prepare("SELECT id FROM cms_auth_user WHERE email = ?").get(email)!.id;
+  f.database.exec(passwordSql(email, await hashPassword("a long enough password")));
+  const row = f.database.prepare("SELECT id, emailVerified FROM cms_auth_user WHERE email = ?").get(email)!;
+  assert.equal(row.id, earlier, "the same editor, not a second one");
+  assert.equal(Number(row.emailVerified), 1);
+  const response = await f.request("sign-in/email", { email, password: "a long enough password" });
+  assert.equal(response.status, 200);
+  const cookie = sessionCookie(response).split(";")[0];
+  assert.equal(
+    await authenticate(new Request(origin, { headers: { Cookie: cookie } }), f.auth, email),
+    email,
+    "the session is accepted by the admin",
+  );
+});
+
 test("password sign-in refuses addresses outside the editors list, and sign-up stays closed", async () => {
   const { passwordSql } = await import("../src/scripts/password.ts");
   const { hashPassword } = await import("../src/password.ts");
