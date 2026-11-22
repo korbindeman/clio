@@ -113,13 +113,23 @@ export class EditableDocument<T> {
       });
     }, wait);
   }
-  // Waits for a pending autosave.
+  // Saves a pending change now and waits for it. Throws if that save fails,
+  // but the queue itself never rejects, so later autosaves still run.
   async flush() {
-    if (this.saveState === "saving") {
-      clearTimeout(this.timer);
-      this.queue = this.queue.then(() => this.saveNow());
-    }
-    await this.queue;
+    if (this.saveState !== "saving") return this.queue;
+    clearTimeout(this.timer);
+    const save = this.queue.then(() => this.saveNow());
+    this.queue = save.then(
+      () => {
+        this.error = "";
+        this.saveState = "saved";
+      },
+      (e) => {
+        this.error = e instanceof Error ? e.message : String(e);
+        this.saveState = "error";
+      },
+    );
+    await save;
   }
 
   private async run(task: () => Promise<void>) {
