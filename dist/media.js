@@ -7,6 +7,7 @@ function contentRange(range, size) {
 const TYPES = {
     webp: "image/webp",
     jpg: "image/jpeg",
+    png: "image/png",
     mp4: "video/mp4",
     mp3: "audio/mpeg",
 };

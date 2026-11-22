@@ -104,6 +104,37 @@ test("a document that is not a list is published as it is", () => {
   assert.equal(publishable(home), home);
 });
 
+test("display sizes may be JPEG, for browsers that cannot encode WebP (Safari)", async () => {
+  const { readImageForm } = await import("../src/upload.ts");
+  const make = (width: number, height: number, format: "jpeg" | "webp" | "png") =>
+    sharp({ create: { width, height, channels: 3, background: "red" } })
+      [format]()
+      .toBuffer();
+  const form = new FormData();
+  form.append("original", new File([await make(400, 200, "png")], "o.png"));
+  form.append("320", new File([await make(320, 160, "jpeg")], "320.jpg"));
+  form.append("400", new File([await make(400, 200, "png")], "400.png"));
+  const share = shareImage("x", 400, 200);
+  form.append("share", new File([await make(share.width, share.height, "jpeg")], "share.jpg"));
+  form.append("placeholder", "data:image/jpeg;base64,/9j/4AAQ");
+  const read = await readImageForm(form, "abc");
+  assert.deepEqual(
+    read.variants.map((v) => v.src),
+    ["/media/abc/320.jpg", "/media/abc/400.png"],
+  );
+  assert.ok(read.objects.some((o) => o.key === "abc/320.jpg" && o.type === "image/jpeg"));
+  // PNG: a transparent cut-out from a browser without WebP encoding.
+  assert.ok(read.objects.some((o) => o.key === "abc/400.png" && o.type === "image/png"));
+  const parsed = imageSchema.safeParse({
+    id: "abc",
+    width: 400,
+    height: 200,
+    variants: read.variants,
+    placeholder: read.placeholder,
+  });
+  assert.ok(parsed.success);
+});
+
 test("sound uploads are checked for an MP3 signature and MP4 audio tracks", () => {
   const ascii = (text: string) => [...text].map((c) => c.charCodeAt(0));
   // A minimal handler box: size, "hdlr", version/flags, pre_defined, type.

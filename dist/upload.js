@@ -1,7 +1,8 @@
 import { imageSize } from "image-size";
 import { placeholderSchema } from "./image.js";
 import { shareImage } from "./share.js";
-export const MAX_UPLOAD = 40 * 1024 * 1024;
+// Workers accept request bodies up to 100 MB.
+export const MAX_UPLOAD = 64 * 1024 * 1024;
 export async function readLimited(request, limit) {
     if (Number(request.headers.get("content-length")) > limit)
         return null;
@@ -64,16 +65,26 @@ export async function readImageForm(form, id) {
     ];
     for (const size of expected) {
         const file = form.get(String(size));
-        if (!(file instanceof File) || file.size > 5 * 1024 * 1024)
+        // PNG (transparent cut-outs from Safari) is lossless, so it may be larger.
+        if (!(file instanceof File) || file.size > 12 * 1024 * 1024)
             throw new Error("An image preview is missing or too large.");
+        // WebP, or from browsers that cannot encode WebP (Safari) JPEG, or PNG
+        // for a cut-out that must stay transparent.
         const dimensions = inspectImage(new Uint8Array(await file.arrayBuffer()), [
             "webp",
+            "jpg",
+            "png",
         ]);
         if (dimensions.width !== size ||
             Math.abs(dimensions.height - Math.round((height * size) / width)) > 1)
             throw new Error("An image preview has invalid dimensions.");
-        const key = `${id}/${size}.webp`;
-        objects.push({ key, file, type: "image/webp" });
+        const extension = dimensions.type;
+        const key = `${id}/${size}.${extension}`;
+        objects.push({
+            key,
+            file,
+            type: `image/${extension === "jpg" ? "jpeg" : extension}`,
+        });
         variants.push({ width: size, src: `/media/${key}` });
     }
     const placeholder = placeholderSchema.safeParse(form.get("placeholder"));

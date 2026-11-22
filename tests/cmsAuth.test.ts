@@ -10,6 +10,17 @@ import {
   approvedCallback,
 } from "../src/auth.ts";
 import { describeClient, loginEmail } from "../src/loginEmail.ts";
+import { approvalTarget } from "../src/approval.ts";
+
+// The emailed link opens /login/?approve=…; the page then follows the verify
+// link. Tests keep the verify link as `url` and the emailed one as `emailed`.
+function verifyLink(emailed: string) {
+  const page = new URL(emailed);
+  const target = approvalTarget(page.searchParams.get("approve"));
+  if (page.pathname !== "/login/" || !target)
+    throw new Error(`Not a sign-in page link: ${emailed}`);
+  return new URL(target, page.origin).toString();
+}
 
 const origin = "https://portfolio.example";
 const email = "editor@example.com";
@@ -30,6 +41,7 @@ function setup() {
   const sent: {
     email: string;
     url: string;
+    emailed?: string;
     otp?: string;
     request?: Request;
   }[] = [];
@@ -56,7 +68,7 @@ function setup() {
     },
     sendLink: async (address, url, request, otp) => {
       if (failedDelivery) throw new Error("Delivery failed");
-      sent.push({ email: address, url, otp, request });
+      sent.push({ email: address, url: verifyLink(url), emailed: url, otp, request });
     },
   });
   const request = (
@@ -123,6 +135,9 @@ test("magic link creates a verified session, is one-use, and sign-out revokes it
   const token = f.tokenOf(f.sent[0].url);
   assert.match(token, /^[a-zA-Z]{32}$/);
   assert.match(f.sent[0].url, /\/api\/auth\/magic-link\/verify\?/);
+  // A mail scanner opening the emailed link only loads the sign-in page.
+  assert.match(f.sent[0].emailed!, /^https:\/\/[^/]+\/login\/\?approve=/);
+  assert.equal(new URL(f.sent[0].emailed!).searchParams.get("token"), null);
   assert.equal(
     new URL(f.sent[0].url).searchParams.get("callbackURL"),
     "/login/?approved=1&next=%2Fadmin%2F",
@@ -379,7 +394,7 @@ test("one email login works on live and WIP; sign-out revokes both", async () =>
     adminEmails: email,
     cookieDomain: "portfolio.example",
     sendLink: async (address: string, url: string) => {
-      f.sent.push({ email: address, url });
+      f.sent.push({ email: address, url: verifyLink(url), emailed: url });
     },
     reserveLink: async () => true,
     revokeLinks: async () => {},
@@ -552,4 +567,62 @@ test("five wrong codes invalidate the email code", async () => {
   assert.notEqual(locked.status, 200);
   assert.equal(sessionCookie(locked), undefined);
   f.database.close();
+});
+
+test("an editor signs in with a password set by the password script", async () => {
+  const { passwordSql } = await import("../src/scripts/password.ts");
+  const { hashPassword } = await import("../src/password.ts");
+  const f = setup();
+  const hash = await hashPassword("a long enough password");
+  assert.match(hash, /^pbkdf2-sha256\$100000\$/);
+  assert.ok(!hash.includes("a long enough password"));
+  f.database.exec(passwordSql(email, hash));
+  // Running it again replaces the password instead of adding a second one.
+  f.database.exec(passwordSql(email, hash));
+  assert.equal(
+    f.database
+      .prepare("SELECT COUNT(*) AS n FROM cms_auth_account WHERE providerId = 'credential'")
+      .get()!.n,
+    1,
+  );
+  const wrong = await f.request("sign-in/email", { email, password: "not the password" });
+  assert.equal(wrong.status, 401);
+  assert.equal(wrong.headers.get("set-cookie"), null);
+  const right = await f.request("sign-in/email", {
+    email: ` ${email.toUpperCase()} `,
+    password: "a long enough password",
+  });
+  assert.equal(right.status, 200);
+  assert.match(right.headers.get("set-cookie") ?? "", /session_token=/);
+});
+
+test("password sign-in refuses addresses outside the editors list, and sign-up stays closed", async () => {
+  const { passwordSql } = await import("../src/scripts/password.ts");
+  const { hashPassword } = await import("../src/password.ts");
+  const f = setup();
+  const stranger = "stranger@example.com";
+  f.database.exec(passwordSql(stranger, await hashPassword("a long enough password")));
+  const response = await f.request("sign-in/email", {
+    email: stranger,
+    password: "a long enough password",
+  }, "", "192.0.2.9");
+  assert.equal(response.status, 401);
+  const signUp = await f.request("sign-up/email", {
+    email: "new@example.com",
+    password: "a long enough password",
+    name: "New",
+  }, "", "192.0.2.10");
+  assert.notEqual(signUp.status, 200);
+  const reset = await f.request("request-password-reset", { email }, "", "192.0.2.11");
+  assert.notEqual(reset.status, 200);
+});
+
+test("password guesses are rate limited", async () => {
+  const f = setup();
+  const statuses: number[] = [];
+  for (let i = 0; i < 7; i++)
+    statuses.push(
+      (await f.request("sign-in/email", { email, password: `guess number ${i}` }, "", "192.0.2.20")).status,
+    );
+  assert.ok(statuses.includes(429), statuses.join(","));
 });

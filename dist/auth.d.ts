@@ -1,4 +1,5 @@
 import { type BetterAuthOptions } from "better-auth";
+import { hashPassword, verifyPassword } from "./password.ts";
 export declare const LOGIN_SECONDS = 600;
 export type LoginConfig = {
     appName: string;
@@ -30,6 +31,16 @@ export declare function createCmsAuth(config: LoginConfig): import("better-auth"
     };
     verification: {
         modelName: "cms_auth_verification";
+    };
+    emailAndPassword: {
+        enabled: true;
+        disableSignUp: true;
+        minPasswordLength: number;
+        maxPasswordLength: number;
+        password: {
+            hash: typeof hashPassword;
+            verify: typeof verifyPassword;
+        };
     };
     session: {
         modelName: "cms_auth_session";
@@ -71,6 +82,10 @@ export declare function createCmsAuth(config: LoginConfig): import("better-auth"
                 max: number;
             };
             "/sign-in/email-otp": {
+                window: number;
+                max: number;
+            };
+            "/sign-in/email": {
                 window: number;
                 max: number;
             };

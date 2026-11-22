@@ -2,6 +2,8 @@ import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP, magicLink } from "better-auth/plugins";
 import { loginDestination } from "./access.ts";
+import { approvalPage } from "./approval.ts";
+import { MIN_PASSWORD_LENGTH, hashPassword, verifyPassword } from "./password.ts";
 
 export const LOGIN_SECONDS = 600;
 
@@ -84,6 +86,16 @@ export function createCmsAuth(config: LoginConfig) {
     user: { modelName: "cms_auth_user" },
     account: { modelName: "cms_auth_account" },
     verification: { modelName: "cms_auth_verification" },
+    // Editors can also sign in with a password. There is no sign-up and no
+    // reset by email: a password is set from the command line
+    // (clio/scripts/password), for an address in the editors list.
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: true,
+      minPasswordLength: MIN_PASSWORD_LENGTH,
+      maxPasswordLength: 128,
+      password: { hash: hashPassword, verify: verifyPassword },
+    },
     session: {
       modelName: "cms_auth_session",
       expiresIn: SESSION_SECONDS,
@@ -114,6 +126,7 @@ export function createCmsAuth(config: LoginConfig) {
         "/sign-in/magic-link": { window: 60, max: 3 },
         "/magic-link/verify": { window: 60, max: 10 },
         "/sign-in/email-otp": { window: 60, max: 10 },
+        "/sign-in/email": { window: 60, max: 5 },
       },
     },
     hooks: {
@@ -127,6 +140,7 @@ export function createCmsAuth(config: LoginConfig) {
         if (
           signedIn &&
           (ctx.path === "/sign-in/email-otp" ||
+            ctx.path === "/sign-in/email" ||
             ctx.path === "/magic-link/verify")
         )
           await config.revokeLinks(signedIn.toLowerCase());
@@ -147,6 +161,26 @@ export function createCmsAuth(config: LoginConfig) {
               message: "Wait one minute before requesting another link.",
             });
           await config.revokeLinks(email);
+        }
+        // Every other password endpoint (sign-up, change, reset) is closed.
+        if (
+          ctx.path.startsWith("/sign-up/") ||
+          ctx.path === "/change-password" ||
+          ctx.path === "/set-password" ||
+          ctx.path.startsWith("/request-password-reset") ||
+          ctx.path.startsWith("/reset-password") ||
+          ctx.path === "/forget-password"
+        )
+          throw new APIError("NOT_FOUND");
+        if (ctx.path === "/sign-in/email") {
+          const email = normalizedEmail(ctx.body);
+          ctx.body.email = email;
+          ctx.body.callbackURL = undefined;
+          ctx.body.rememberMe = true;
+          if (!allowedAdmin(email, config.adminEmails))
+            throw new APIError("UNAUTHORIZED", {
+              message: "Invalid email or password",
+            });
         }
         if (ctx.path === "/sign-in/email-otp") {
           const email = normalizedEmail(ctx.body);
@@ -180,7 +214,7 @@ export function createCmsAuth(config: LoginConfig) {
             const otp = await auth.api.createVerificationOTP({
               body: { email, type: "sign-in" },
             });
-            await config.sendLink(email, url, ctx?.request, otp);
+            await config.sendLink(email, approvalPage(url, config.baseURL), ctx?.request, otp);
           } catch {
             try {
               const hashed = await hashLoginToken(token);

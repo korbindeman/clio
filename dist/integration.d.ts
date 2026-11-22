@@ -6,6 +6,7 @@ export interface CmsOptions {
     documents: Record<string, DocumentKind>;
     pages?: string;
     release?: boolean;
+    isr?: string[];
 }
 export declare const DEV_ROUTES: {
     pattern: string;
