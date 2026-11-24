@@ -37,7 +37,7 @@ export function loginAuth(request) {
                 .run();
         },
         async sendLink(email, url, linkRequest, otp) {
-            const message = loginEmail(url, describeClient(linkRequest?.headers.get("user-agent")), otp);
+            const message = loginEmail(url, describeClient(linkRequest?.headers.get("user-agent")), otp, config.locale ?? "en");
             if (local) {
                 // Development only: no real email is sent. Production builds remove this branch.
                 console.info(JSON.stringify({ event: "local_login_link", email, url, otp }));
@@ -45,13 +45,18 @@ export function loginAuth(request) {
                 return;
             }
             try {
-                await env.LOGIN_EMAIL.send({
-                    from: { email: env.LOGIN_FROM_EMAIL, name: config.appName },
-                    to: email,
-                    subject: message.subject,
-                    text: message.text,
-                    html: message.html,
-                });
+                if (env.RESEND_API_KEY)
+                    await sendWithResend(env, email, message);
+                else if (env.LOGIN_EMAIL)
+                    await env.LOGIN_EMAIL.send({
+                        from: { email: env.LOGIN_FROM_EMAIL, name: config.appName },
+                        to: email,
+                        subject: message.subject,
+                        text: message.text,
+                        html: message.html,
+                    });
+                else
+                    throw new Error("No sign-in email delivery is configured.");
                 console.info(JSON.stringify({ event: "login_email_sent" }));
             }
             catch {
@@ -60,6 +65,27 @@ export function loginAuth(request) {
             }
         },
     });
+}
+// Sites that already send their own mail through Resend (RESEND_API_KEY) send the
+// sign-in email the same way, instead of Cloudflare Email Sending.
+async function sendWithResend(env, to, message) {
+    const base = (env.RESEND_API_BASE || "https://api.resend.com").replace(/\/$/, "");
+    const response = await fetch(`${base}/emails`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${env.RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            from: `${config.appName} <${env.LOGIN_FROM_EMAIL}>`,
+            to: [to],
+            subject: message.subject,
+            text: message.text,
+            html: message.html,
+        }),
+    });
+    if (!response.ok)
+        throw new Error(`Resend answered ${response.status}`);
 }
 // The signed-in editor's email, or null.
 export async function currentEditor(request) {

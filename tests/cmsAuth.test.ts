@@ -502,6 +502,20 @@ test("login callback stays on the sign-in page and login email names the browser
   );
 });
 
+test("the sign-in email in Dutch", () => {
+  const message = loginEmail(
+    "https://rosie.example/login/?approve=x",
+    "Safari on iOS",
+    "482193",
+    "nl",
+  );
+  assert.equal(message.subject, "Inloggen bevestigen");
+  assert.match(message.text, /Er is gevraagd om in te loggen vanaf Safari op iOS/);
+  assert.match(message.text, /Je inlogcode is 482193/);
+  assert.match(message.html, />Inloggen</);
+  assert.match(loginEmail("https://x.example", "", "", "nl").text, /met dit e-mailadres/);
+});
+
 test("email code creates a verified session, is one-use, and rejects guesses", async () => {
   const f = setup();
   assert.equal((await f.send()).status, 200);
