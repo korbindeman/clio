@@ -9,7 +9,11 @@ export interface CmsEnv {
   CMS_ORIGINALS: R2Bucket;
   WIP_MEDIA?: R2Bucket;
   WIP_ORIGINALS?: R2Bucket;
-  LOGIN_EMAIL: SendEmail;
+  // Sign-in emails go through Cloudflare Email Sending (LOGIN_EMAIL), or through
+  // Resend when RESEND_API_KEY is set. RESEND_API_BASE is for tests with a mock.
+  LOGIN_EMAIL?: SendEmail;
+  RESEND_API_KEY?: string;
+  RESEND_API_BASE?: string;
   LOGIN_FROM_EMAIL: string;
   ADMIN_EMAILS: string;
   AUTH_BASE_URL: string;

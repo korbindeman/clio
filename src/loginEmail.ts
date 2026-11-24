@@ -32,7 +32,10 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;");
 }
 
-export function loginEmail(url: string, client = "", otp = "") {
+export type Locale = "en" | "nl";
+
+export function loginEmail(url: string, client = "", otp = "", locale: Locale = "en") {
+  if (locale === "nl") return loginEmailNl(url, client, otp);
   const request = client
     ? `A sign-in was requested from ${client}.`
     : "A sign-in was requested for this email.";
@@ -44,5 +47,24 @@ export function loginEmail(url: string, client = "", otp = "") {
     subject: "Approve this sign-in",
     text: `${request}\n\n${code}Or approve this request:\n${url}\n\nThe code and link expire in 10 minutes and can be used once. If you did not request this, ignore this email.`,
     html: `<p>${escapeHtml(request)}</p>${htmlCode}<p><a href="${escapeHtml(url)}" style="display:inline-block;padding:10px 18px;border:1px solid #222;color:#222;text-decoration:none">Approve</a></p><p style="color:#757575;font-size:14px">The code and link expire in 10 minutes and can be used once. If you did not request this, ignore this email.</p>`,
+  };
+}
+
+// The same email in Dutch, for sites whose editors work in Dutch.
+function loginEmailNl(url: string, client: string, otp: string) {
+  const device = client.replace(/ on /, " op ").replace(/^a browser/, "een browser");
+  const request = device
+    ? `Er is gevraagd om in te loggen vanaf ${device}.`
+    : "Er is gevraagd om in te loggen met dit e-mailadres.";
+  const code = otp ? `Je inlogcode is ${otp}.\n\n` : "";
+  const htmlCode = otp
+    ? `<p>Je inlogcode is <strong>${escapeHtml(otp)}</strong>.</p>`
+    : "";
+  const expiry =
+    "De code en de link verlopen na 10 minuten en werken één keer. Heb je niet gevraagd om in te loggen? Dan kun je deze e-mail negeren.";
+  return {
+    subject: "Inloggen bevestigen",
+    text: `${request}\n\n${code}Of bevestig via deze link:\n${url}\n\n${expiry}`,
+    html: `<p>${escapeHtml(request)}</p>${htmlCode}<p><a href="${escapeHtml(url)}" style="display:inline-block;padding:10px 18px;border:1px solid #222;color:#222;text-decoration:none">Inloggen</a></p><p style="color:#757575;font-size:14px">${escapeHtml(expiry)}</p>`,
   };
 }

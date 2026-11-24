@@ -21,6 +21,8 @@ export interface CmsOptions {
   // keep in the edge cache until the next publication, e.g.
   // ["/", "/archive/garments", "/collections/*"]. See src/isr.ts.
   isr?: string[];
+  // The language of the sign-in email: "en" (default) or "nl".
+  locale?: "en" | "nl";
 }
 
 const PACKAGE = "@korbindeman/clio";
@@ -99,6 +101,7 @@ export default function cms(options: CmsOptions): AstroIntegration {
     cookiePrefix: options.cookiePrefix,
     documents: options.documents,
     isr: options.isr ?? [],
+    locale: options.locale ?? "en",
     // A new id for every build, so ISR pages cached by an earlier deploy
     // (which point at that build's script files) are never served again.
     build: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,

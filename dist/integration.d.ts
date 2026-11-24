@@ -7,6 +7,7 @@ export interface CmsOptions {
     pages?: string;
     release?: boolean;
     isr?: string[];
+    locale?: "en" | "nl";
 }
 export declare const DEV_ROUTES: {
     pattern: string;

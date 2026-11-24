@@ -5,6 +5,7 @@ declare module "virtual:clio/config" {
     cookiePrefix: string;
     documents: Record<string, "list" | "object">;
     isr: string[];
+    locale: "en" | "nl";
     build: string;
   };
   export default config;
